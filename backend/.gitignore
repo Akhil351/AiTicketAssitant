@@ -1,0 +1,9 @@
+# Node modules
+node_modules/
+
+# Optional: Ignore logs, environment files, and build output
+.env
+.DS_Store
+*.log
+dist/
+build/
