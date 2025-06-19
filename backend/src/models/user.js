@@ -1,7 +1,7 @@
 import monogoose from "mongoose";
 
 const userSchema = new monogoose.Schema({
-  email: { type: String, required: true, unique: True },
+  email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   role: {
     type: String,
