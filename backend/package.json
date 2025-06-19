@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "inngest-dev": "npx inngest-cli@latest dev"
+    "inngest-dev": "npx inngest-cli@latest dev --no-discovery -u http://localhost:3510/api/inngest"
   },
   "keywords": [],
   "author": "",

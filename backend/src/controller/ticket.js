@@ -9,11 +9,13 @@ export const createTicket = async (req, res) => {
         .status(400)
         .json({ message: "Title and description are required" });
     }
-    const newTicket = Ticket.create({
+
+    const newTicket = await Ticket.create({
       title,
       description,
       createdBy: req.user._id.toString(),
     });
+
     await inngest.send({
       name: "ticket/created",
       data: {
@@ -23,6 +25,7 @@ export const createTicket = async (req, res) => {
         createdBy: req.user._id.toString(),
       },
     });
+
     return res.status(201).json({
       message: "Ticket created and processing started",
       ticket: newTicket,
