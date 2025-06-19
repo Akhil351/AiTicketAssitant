@@ -1,13 +1,13 @@
-import { createAgent, gemini } from "@inngest/agent-kit";
+import { createAgent, openai } from "@inngest/agent-kit"; // use openai instead of gemini
 
-// Create the AI agent once and reuse
-const supportAgent = createAgent({
-  model: gemini({
-    model: "gemini-1.5-flash-8b",
-    apiKey: process.env.GEMINI_API_KEY,
-  }),
-  name: "Ai Ticket Triage Assistant",
-  system: `You are an expert AI assistant that processes technical support tickets.
+const analyzeTicket = async (ticket) => {
+  const supportAgent = createAgent({
+    model: openai({
+      model: "gpt-4o", 
+      apiKey: process.env.OPENAI_API_KEY,
+    }),
+    name: "AI Ticket Triage Assistant",
+    system: `You are an expert AI assistant that processes technical support tickets.
 
 Your job is to:
 1. Summarize the issue.
@@ -21,10 +21,9 @@ IMPORTANT:
 - The format must be a raw JSON object.
 
 Repeat: Do not wrap your output in markdown or code fences.`,
-});
+  });
 
-const analyzeTicket = async (ticket) => {
-  const prompt = `You are a ticket triage agent. Only return a strict JSON object with no extra text, headers, or markdown.
+  const response = await supportAgent.run(`You are a ticket triage agent. Only return a strict JSON object with no extra text, headers, or markdown.
 
 Analyze the following support ticket and provide a JSON object with:
 
@@ -47,19 +46,17 @@ Respond ONLY in this JSON format and do not include any other text or markdown i
 Ticket information:
 
 - Title: ${ticket.title}
-- Description: ${ticket.description}`;
+- Description: ${ticket.description}`);
+
+  const raw = response.output?.[0]?.content || "";
 
   try {
-    const response = await supportAgent.run(prompt);
-    const raw = response.output[0].context;
-
-    // Remove markdown formatting if present
     const match = raw.match(/```json\s*([\s\S]*?)\s*```/i);
     const jsonString = match ? match[1] : raw.trim();
-
+    console.log(JSON.parse(jsonString));
     return JSON.parse(jsonString);
-  } catch (error) {
-    console.error("❌ Failed to parse AI response:", error.message);
+  } catch (e) {
+    console.log("Failed to parse JSON from AI response: " + e.message);
     return null;
   }
 };
