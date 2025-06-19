@@ -1,9 +1,9 @@
 import { NonRetriableError } from "inngest";
 import Ticket from "../../models/ticket.js";
+import User from "../../models/user.js";
 import { inngest } from "../client.js";
 import { sendMail } from "../../utils/mail.js";
-import analyzeTicket from "../../utils/ai";
-import User from "../../models/user.js";
+import analyzeTicket from "../../utils/ai.js";
 
 export const onTicketCreated = inngest.createFunction(
   { id: "on-ticker-created", retries: 2 },
@@ -20,11 +20,7 @@ export const onTicketCreated = inngest.createFunction(
       });
 
       await step.run("update-ticket-status", async () => {
-        await Ticket.findByIdAndUpdate(
-          ticket._id,
-
-          { status: "TODO" }
-        );
+        await Ticket.findByIdAndUpdate(ticket._id, { status: "TODO" });
       });
 
       const aiResponse = await analyzeTicket(ticket);
@@ -45,7 +41,40 @@ export const onTicketCreated = inngest.createFunction(
         return skills;
       });
 
-      const moderator = await step.run("assign-moderator", async () => {});
-    } catch (error) {}
+      const moderator = await step.run("assign-moderator", async () => {
+        let user = await User.findOne({
+          role: "moderator",
+          skills: {
+            $elemMatch: {
+              $regex: relatedSkills.join("|"),
+              $options: "i",
+            },
+          },
+        });
+        if (!user) {
+          user = await User.findOne({ role: "admin" });
+        }
+        await Ticket.findByIdAndUpdate(ticket._id, {
+          assignedTo: user?._id || null,
+        });
+        return user;
+      });
+
+      await step.run("send-email-notification", async () => {
+        if (moderator) {
+          const finalTicket = await Ticket.findById(ticket._id);
+          await sendMail(
+            moderator.email,
+            "Ticket Assigned",
+            `
+            A new ticket is assgined to you ${finalTicket.title} `
+          );
+        }
+      });
+      return { success: true };
+    } catch (error) {
+      console.error("❌ Error running the step", error.message);
+      return { success: false };
+    }
   }
 );
